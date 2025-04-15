@@ -22,6 +22,11 @@ export const useAuthStore = defineStore('auth', {
           Cookies.set('oreo', response.data.jwt)
           Cookies.set('userData', JSON.stringify(dataUser))
           this.user = { responseData }
+          const tokenAuthorization = `Bearer ${Cookies.get('oreo')}`.replace(
+            '"',
+            ''
+          )
+          axios.defaults.headers['Authorization'] = tokenAuthorization
           return true
         }
         return false

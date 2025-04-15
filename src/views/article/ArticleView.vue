@@ -21,93 +21,130 @@
         <v-btn icon>
           <v-icon>mdi-magnify</v-icon>
         </v-btn>
-        <v-btn icon>
+        <v-btn icon @click="openDialog('')">
           <v-icon>mdi-plus </v-icon>
         </v-btn>
       </v-app-bar>
       <v-main>
+        <header
+          class="py-12 bg-cover bg-center relative"
+          style="background-image: url('https://picsum.photos/1920/1080?random');"
+        >
+          <div class="container mx-auto px-4 text-center relative z-10 text-white">
+            <h1 class="text-3xl font-bold">
+              The Article: Collection of articles in the library
+            </h1>
+            <p class="mt-4">
+              look for interesting and useful articles for you to read
+            </p>
+            <div class="mt-6 flex justify-center">
+              <div class="relative w-full max-w-md">
+                <v-icon
+                  class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-300"
+                >
+                  mdi-magnify
+                </v-icon>
+                <input
+                  id="search"
+                  class="w-full pl-10 pr-4 bg-white py-2 border rounded-lg focus:outline-none transition-all border-gray-300 focus:ring-2 focus:ring-blue-500"
+                  placeholder="Search . . ."
+                  type="text"
+                >
+              </div>
+            </div>
+          </div>
+        </header>
         <v-container fluid>
+          <div class="justify-self-end">
+            <v-pagination
+              v-model:current-page="currentPage"
+              :length="pageCount"
+              rounded="circle"
+              size="small"
+              :total-visible="4"
+            />
+          </div>
           <v-row>
-            <v-col v-for="(item, index) in items" :key="index" :cols="12" :md="4">
-              <v-card
-                :border="true"
-                :density="index % 2 === 0 ? 'compact' : 'comfortable'"
-                prepend-avatar="https://randomuser.me/api/portraits/women/10.jpg"
-                :subtitle="'Salsa, merengue, y cumbia'"
-                :title="item.title"
-                variant="text"
-              >
-                <v-img cover height="128" :src="item.image" />
-                <v-card-text>
-                  {{ item.description }}
-                </v-card-text>
-                <template #actions>
-                  <v-btn color="primary" variant="text">View More</v-btn>
-                  <v-btn color="primary" variant="text">See in Map</v-btn>
-                </template>
-              </v-card>
+            <v-col
+              v-for="(item, index) in items"
+              :key="index"
+              :cols="12"
+              :lg="4"
+              :md="4"
+              :sm="12"
+            >
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <article class="bg-white p-6 rounded-lg shadow-md">
+                  <img
+                    alt="Two people working together in an office setting"
+                    class="w-full h-48 object-cover rounded-t-lg"
+                    :src="item.cover_image_url"
+                  >
+                  <div class="mt-4">
+                    <p class="text-gray-600">
+                      Publisher • {{ formatDate(item.publishedAt) }}
+                    </p>
+                    <h2 class="text-xl font-bold mt-2">
+                      {{ item.title }}
+                    </h2>
+                    <p class="mt-2 text-gray-700">
+                      {{ `${item.description.toString().substring(0, 200)} . . .` }}
+                    </p>
+                    <div class="mt-4 flex space-x-2 justify-space-between">
+                      <span class="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm">
+                        Design
+                      </span>
+                      <span class="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm cursor-pointer" @click="openDialog(item)">
+                        <v-icon>mdi-pencil </v-icon>
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              </div>
             </v-col>
           </v-row>
         </v-container>
       </v-main>
     </v-layout>
   </v-card>
+  <Dialog :model-value="showDialog" :received-value="dialogValue" @reload="items" @update:model-value="showDialog = $event" />
 </template>
 
 <script setup lang="ts">
   import { useAuthStore } from '@/stores/auth'
-  const items = [
-    {
-      title: 'Cuba',
-      image: 'https://picsum.photos/512/128?image=660',
-      description: 'During my last trip to South America, I spent 2 weeks traveling through Patagonia in Chile.',
-    },
-    {
-      title: 'Florida',
-      image: 'https://picsum.photos/512/128?random',
-      description: 'During my last trip to Florida, I spent 2 weeks traveling through the Everglades.',
-    },
-    {
-      title: 'Florida',
-      image: 'https://picsum.photos/512/128?random',
-      description: 'During my last trip to Florida, I spent 2 weeks traveling through the Everglades.',
-    },
-    {
-      title: 'Florida',
-      image: 'https://picsum.photos/512/128?random',
-      description: 'During my last trip to Florida, I spent 2 weeks traveling through the Everglades.',
-    },
-    {
-      title: 'Florida',
-      image: 'https://picsum.photos/512/128?random',
-      description: 'During my last trip to Florida, I spent 2 weeks traveling through the Everglades.',
-    },
-    {
-      title: 'Florida',
-      image: 'https://picsum.photos/512/128?random',
-      description: 'During my last trip to Florida, I spent 2 weeks traveling through the Everglades.',
-    },
-    {
-      title: 'Florida',
-      image: 'https://picsum.photos/512/128?random',
-      description: 'During my last trip to Florida, I spent 2 weeks traveling through the Everglades.',
-    },
-    {
-      title: 'Florida',
-      image: 'https://picsum.photos/512/128?random',
-      description: 'During my last trip to Florida, I spent 2 weeks traveling through the Everglades.',
-    },
-    {
-      title: 'Florida',
-      image: 'https://picsum.photos/512/128?random',
-      description: 'During my last trip to Florida, I spent 2 weeks traveling through the Everglades.',
-    },
-  ];
-
+  import { useArticleStore } from '@/stores/article'
+  import { computed, onMounted, ref, watch } from 'vue'
+  import Dialog from './component/dialog.vue'
   const authStore = useAuthStore()
+  const articleStore = useArticleStore()
   const router = useRouter()
+  const items = computed(() => articleStore.articles)
+  const currentPage = ref(1)
+  const pageSize = 9
+  const pageCount = computed(() => articleStore.pageCount)
+  const dialogValue = ref('')
+  const showDialog = ref(false)
+  const openDialog = value => {
+    dialogValue.value = value
+    showDialog.value = true
+  }
   async function logoutAction () {
     authStore.logout()
     router.push('/login')
   }
+  function formatDate (dateStr) {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).replace(/ /g, ' ')
+  }
+  onMounted(() => {
+    articleStore.fetchArticles(currentPage.value, pageSize)
+  })
+  watch(currentPage, newPage => {
+    console.log('Current Page:', currentPage)
+    articleStore.fetchArticles(newPage, pageSize)
+  })
 </script>
