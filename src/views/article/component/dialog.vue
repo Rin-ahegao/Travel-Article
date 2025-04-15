@@ -64,113 +64,121 @@
   <ToastLibrary ref="toast" />
 </template>
 
-<script setup lang="ts">
-import { ref, watch, onMounted, getCurrentInstance } from 'vue'
-import { defineEmits, defineProps } from 'vue'
+<script lang="ts">
+import { defineComponent } from 'vue'
 import { useSelectCategory } from '@/stores/select'
 import { useArticleStore } from '@/stores/article'
 import ToastLibrary from '@/library/toastLibrary.vue'
-const articleStore = useArticleStore()
-const categoryStore = useSelectCategory()
-const { proxy }: any = getCurrentInstance()
-const emit = defineEmits(['update:modelValue', 'reload'])
-const props = defineProps({
-  modelValue: Boolean,
-  receivedValue: [String, Object],
-})
 
-const internalDialog = ref(props.modelValue)
-const isValid = ref(false)
-
-const form = ref({
-  titles: '',
-  deskripsi: '',
-  kategori: '',
-  coverImage: null,
-})
-console.log(props.receivedValue);
-
-onMounted(() => {
-  categoryStore.fetchCategory()
-})
-
-watch(() => props.modelValue, val => {
-  internalDialog.value = val
-})
-
-watch(internalDialog, val => {
-  emit('update:modelValue', val)
-})
-watch(
-  () => props.receivedValue,
-  (newVal) => {
-
-    if (typeof newVal === 'object' && newVal !== null) {
-      // Ini Edit
-      form.value.titles = newVal.title || ''
-      form.value.deskripsi = newVal.description || ''
-      form.value.kategori = newVal.category || ''
-      form.value.coverImage = newVal.cover_image_url || ''
-    } else {
-      // Ini Tambah Baru
-      form.value.titles = ''
-      form.value.deskripsi = ''
-      form.value.kategori = ''
-      form.value.coverImage = ''
+export default defineComponent({
+  components: {
+    ToastLibrary,
+  },
+  props: {
+    modelValue: {
+      type: Boolean,
+      required: true
+    },
+    receivedValue: {
+      type: [String, Object],
+      default: ''
     }
   },
-  { immediate: true }
-)
-const closeDialog = () => {
-  internalDialog.value = false
-}
-const handleFileChange = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
+  emits: ['update:modelValue', 'reload'],
+  data() {
+    return {
+      internalDialog: this.modelValue,
+      isValid: false,
+      form: {
+        titles: '',
+        deskripsi: '',
+        kategori: '',
+        coverImage: null as string | null
+      },
+      categoryStore: useSelectCategory(),
+      articleStore: useArticleStore(),
+    }
+  },
+  watch: {
+    modelValue(val: boolean) {
+      this.internalDialog = val
+    },
+    internalDialog(val: boolean) {
+      this.$emit('update:modelValue', val)
+    },
+    receivedValue: {
+      immediate: true,
+      handler(newVal) {
+        if (typeof newVal === 'object' && newVal !== null) {
+          this.form.titles = newVal.title || ''
+          this.form.deskripsi = newVal.description || ''
+          this.form.kategori = newVal.category || ''
+          this.form.coverImage = newVal.cover_image_url || ''
+        } else {
+          this.form.titles = ''
+          this.form.deskripsi = ''
+          this.form.kategori = ''
+          this.form.coverImage = ''
+        }
+      }
+    }
+  },
+  mounted() {
+    this.categoryStore.fetchCategory()
+  },
+  methods: {
+    closeDialog() {
+      this.internalDialog = false
+    },
+    async handleFileChange(event: Event) {
+      const target = event.target as HTMLInputElement
+      const file = target.files?.[0]
 
-  if (file && file.type.startsWith('image/')) {
-    const base64 = await convertToBase64(file)
-    form.value.coverImage = base64
-  } else {
-    alert('File harus berupa gambar (jpg, jpeg, png)')
-    form.value.coverImage = ''
-  }
-}
-const convertToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = error => reject(error)
-  })
-}
-const submitForm = async () => {
-  const payload = {
-    data: {
-      title: form.value.titles,
-      description: form.value.deskripsi,
-      category: form.value.kategori,
-      cover_image_url: form.value.coverImage,
+      if (file && file.type.startsWith('image/')) {
+        const base64 = await this.convertToBase64(file)
+        this.form.coverImage = base64
+      } else {
+        alert('File harus berupa gambar (jpg, jpeg, png)')
+        this.form.coverImage = ''
+      }
+    },
+    convertToBase64(file: File): Promise<string> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.readAsDataURL(file)
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = error => reject(error)
+      })
+    },
+    async submitForm() {
+      const payload = {
+        data: {
+          title: this.form.titles,
+          description: this.form.deskripsi,
+          category: this.form.kategori,
+          cover_image_url: this.form.coverImage,
+        }
+      }
+      let result = false
+      if (typeof this.receivedValue === 'object' && this.receivedValue?.id) {
+        result = await this.articleStore.updateArticles(payload, this.receivedValue.documentId)
+        if (result) {
+          await this.articleStore.fetchArticles()
+        }
+      } else {
+        result = await this.articleStore.insertArticles(payload)
+        if (result) {
+          await this.articleStore.fetchArticles()
+        }
+      }
+      if (result) {
+        this.$emit('reload')
+        this.closeDialog()
+        this.$refs.toast.showToastSuccess('Successfully Saved 👌')
+      } else {
+        this.$refs.toast.showToastWarning('Failed to save')
+      }
     }
   }
-
-  let result = false
-
-  if (typeof props.receivedValue === 'object' && props.receivedValue?.id) {
-    // Edit
-    result = await articleStore.updateArticles(payload, props.receivedValue.id)
-  } else {
-    // Tambah
-    result = await articleStore.insertArticles(payload)
-  }
-
-  if (result) {
-    emit('reload')
-    closeDialog()
-    proxy.$refs.toast.showToastSuccess('Successfully Saved 👌')
-  } else {
-    proxy.$refs.toast.showToastWarning('Failed to save')
-  }
-}
-
+})
 </script>
