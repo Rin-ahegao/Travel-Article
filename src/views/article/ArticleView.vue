@@ -1,6 +1,6 @@
 <template>
-  <v-card class="mx-auto" color="grey-lighten-3">
-    <v-layout row wrap>
+  <v-card class="mx-auto">
+    <v-layout row wrap style="width: 100vw;">
       <v-app-bar color="teal-darken-4" image="https://picsum.photos/1920/1080?random">
         <template #image>
           <v-img gradient="to top right, rgba(19,84,122,.8), rgba(128,208,199,.8)" />
@@ -46,7 +46,7 @@
         </header>
         <v-container fluid>
           <div class="justify-self-end">
-            <v-pagination v-model:current-page="currentPage" :length="pageCount" rounded="circle" size="small"
+            <v-pagination v-model:current-page="currentPage" :length="pageCount" @update:model-value="handlePageChange" rounded="circle" size="small"
               :total-visible="4" />
           </div>
           <v-row>
@@ -193,6 +193,9 @@ export default defineComponent({
       this.dialogValueDelete = value
       this.showDeleteDialog = true
     },
+    handlePageChange(newPage: number) {
+    this.currentPage = newPage
+  },
     logoutAction() {
       const authStore = useAuthStore()
       const router = useRouter()
@@ -215,7 +218,6 @@ export default defineComponent({
   watch: {
     currentPage(newPage) {
       const articleStore = useArticleStore()
-      console.log('Current Page:', newPage)
       articleStore.fetchArticles(newPage, this.pageSize)
     }
   },

@@ -133,7 +133,6 @@ export default defineComponent({
     async handleFileChange(event: Event) {
       const target = event.target as HTMLInputElement
       const file = target.files?.[0]
-
       if (file && file.type.startsWith('image/')) {
         const base64 = await this.convertToBase64(file)
         this.form.coverImage = base64
@@ -151,6 +150,10 @@ export default defineComponent({
       })
     },
     async submitForm() {
+      if (!this.form.titles || !this.form.deskripsi || !this.form.kategori) {
+        this.$refs.toast.showToastWarning('Semua field wajib diisi!')
+        return
+      }
       const payload = {
         data: {
           title: this.form.titles,
