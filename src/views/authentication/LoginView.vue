@@ -92,8 +92,8 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const form = ref({
-  identifier: 'dummy@gmail.com',
-  password: '1234',
+  identifier: '',
+  password: '',
 })
 const loading = ref(false)
 const authStore = useAuthStore()
